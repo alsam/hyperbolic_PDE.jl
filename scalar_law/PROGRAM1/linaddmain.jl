@@ -1,12 +1,12 @@
 #***********************************************************************
 #  Copyright 2006 John A. Trangenstein
 #
-#  This software is made available for research and instructional use 
-#  only. 
-#  You may copy and use this software without charge for these 
-#  non-commercial purposes, provided that the copyright notice and 
-#  associated text is reproduced on all copies.  
-#  For all other uses (including distribution of modified versions), 
+#  This software is made available for research and instructional use
+#  only.
+#  You may copy and use this software without charge for these
+#  non-commercial purposes, provided that the copyright notice and
+#  associated text is reproduced on all copies.
+#  For all other uses (including distribution of modified versions),
 #  please contact the author at
 #    John A. Trangenstein
 #    Department of Mathematics
@@ -15,18 +15,18 @@
 #    USA
 #  or
 #    johnt@math.duke.edu
-#  
+#
 #  This software is made available "as is" without any assurance that it
-#  is completely correct, or that it will work for your purposes.  
+#  is completely correct, or that it will work for your purposes.
 #  Use the software at your own risk.
 #***********************************************************************
 __precompile__()
+using Printf, DocOpt
 using OffsetArrays
-using DocOpt
 
 include("consts.jl")
 
-using consts
+using .consts
 
 include("riemprob.jl")
 include("linearad.jl")
@@ -35,23 +35,23 @@ include("upwind.jl")
 
 function do_computation(ncells, nsteps, verbose, print_solution)
 
-    u    = OffsetArray(Float64, -2:ncells+1)
-    x    = OffsetArray(Float64,  0:ncells)
-    flux = OffsetArray(Float64,  0:ncells)
-    dfdu = OffsetArray(Float64, -2:ncells+1)
+    u    = OffsetArray{Float64}(undef, -2:ncells+1)
+    x    = OffsetArray{Float64}(undef,  0:ncells)
+    flux = OffsetArray{Float64}(undef,  0:ncells)
+    dfdu = OffsetArray{Float64}(undef, -2:ncells+1)
 
-    const tmax     =  0.8
-    const cfl      =  0.9
+    tmax     =  0.8
+    cfl      =  0.9
 
     # array bounds:
-    const fc=-2
-    const lc=ncells+1
-    const fm=0
-    const lm=ncells-1
-    const fs=0
-    const ls=ncells-1
-    const ifirst=0
-    const ilast=ncells-1
+    fc=-2
+    lc=ncells+1
+    fm=0
+    lm=ncells-1
+    fs=0
+    ls=ncells-1
+    ifirst=0
+    ilast=ncells-1
 
     initsl(ncells,fc,lc,fm,lm,ifirst,ilast, u,x)
 
@@ -78,7 +78,7 @@ function do_computation(ncells, nsteps, verbose, print_solution)
 
     # write final results (plot later)
     if print_solution
-        @unsafe for ic=0:ncells-1
+        @inbounds for ic=0:ncells-1
             xc = (x[ic]+x[ic+1])*0.5
             uc = u[ic]
             @printf("%e %e\n",xc,uc)
@@ -88,8 +88,8 @@ function do_computation(ncells, nsteps, verbose, print_solution)
 end
 
 function main()
-    const script_name = basename(Base.source_path())
-    const doc = """$script_name
+    script_name = basename(Base.source_path())
+    doc = """$script_name
 
 Usage:
   $script_name -h | --help
