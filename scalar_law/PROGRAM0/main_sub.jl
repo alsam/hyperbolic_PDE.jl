@@ -1,12 +1,12 @@
 #***********************************************************************
 #  Copyright 2006 John A. Trangenstein
 #
-#  This software is made available for research and instructional use 
-#  only. 
-#  You may copy and use this software without charge for these 
-#  non-commercial purposes, provided that the copyright notice and 
-#  associated text is reproduced on all copies.  
-#  For all other uses (including distribution of modified versions), 
+#  This software is made available for research and instructional use
+#  only.
+#  You may copy and use this software without charge for these
+#  non-commercial purposes, provided that the copyright notice and
+#  associated text is reproduced on all copies.
+#  For all other uses (including distribution of modified versions),
 #  please contact the author at
 #    John A. Trangenstein
 #    Department of Mathematics
@@ -15,9 +15,9 @@
 #    USA
 #  or
 #    johnt@math.duke.edu
-#  
+#
 #  This software is made available "as is" without any assurance that it
-#  is completely correct, or that it will work for your purposes.  
+#  is completely correct, or that it will work for your purposes.
 #  Use the software at your own risk.
 #***********************************************************************
 
@@ -26,18 +26,18 @@
 #@inline getindex{T,N,P,IV}(V::SubArray{T,N,P,IV}, I::Union(Real, AbstractVector, Colon)...) = Base.unsafe_getindex(V, to_index(I)...)
 #@inline setindex!(V::SubArray, v, I::Int64...) = Base.unsafe_setindex!(V, v, I...)
 
-using OffsetArrays # for @unsafe
+using OffsetArrays # for @inbounds
 
 macro shifted_array(T, r)
-    :(sub(Array($T, length($r)), -minimum($r) + 2 : length($r)))
+    :(view(Array{$T}(undef, length($r)), -minimum($r) + 2 : length($r)))
 end
 
 macro shifted_array2(T, r1, r2)
-    :(sub(Array($T, length($r1), length($r2)), -minimum($r1) + 2 : length($r1), -minimum($r2) + 2 : length($r2)))
+    :(view(Array{$T}(undef, length($r1), length($r2)), -minimum($r1) + 2 : length($r1), -minimum($r2) + 2 : length($r2)))
 end
 
 macro shifted_array3(T, r1, r2, r3)
-    :(sub(Array($T, length($r1), length($r2), length($r3)), -minimum($r1) + 2 : length($r1), -minimum($r2) + 2 : length($r2), -minimum($r3) + 2 : length($r3)))
+    :(view(Array{$T}(undef, length($r1), length($r2), length($r3)), -minimum($r1) + 2 : length($r1), -minimum($r2) + 2 : length($r2), -minimum($r3) + 2 : length($r3)))
 end
 
 
@@ -47,23 +47,23 @@ function do_computation(nsteps, ncells, tmax, ifirst, ilast, statelft, statergt,
     # loop over timesteps
     while istep < nsteps && t < tmax
         # right boundary condition: outgoing wave
-        @unsafe for ic=ncells:lc
+        @inbounds for ic=ncells:lc
             u[ic]=u[ncells-1]
         end
         # left boundary condition: specified value
-        @unsafe for ic=fc:-1
+        @inbounds for ic=fc:-1
             u[ic]=statelft
         end
 
         # upwind fluxes times dt (ie, flux time integral over cell side)
         # assumes velocity > 0
         vdt=velocity*dt
-        @unsafe for ie=ifirst:ilast+1
+        @inbounds for ie=ifirst:ilast+1
             flux[ie]=vdt*u[ie-1]
         end
 
         # conservative difference
-        @unsafe for ic=ifirst:ilast
+        @inbounds for ic=ifirst:ilast
             u[ic] -= (flux[ic+1]-flux[ic]) / (x[ic+1]-x[ic])
         end
 
@@ -76,7 +76,7 @@ end
 
 function main()
 
-    const ncells = 10000
+    ncells = 10000
 
     #   integer nsteps
     #   double precision cfl,tmax
@@ -86,9 +86,9 @@ function main()
     #  &  x(0:ncells),
     #  &  flux(0:ncells)
 
-    u    = @shifted_array(Float64, -2:ncells+1)
-    x    = @shifted_array(Float64,  0:ncells)
-    flux = @shifted_array(Float64,  0:ncells)
+    u    = @eval @shifted_array(Float64, -2:$ncells+1)
+    x    = @eval @shifted_array(Float64,  0:$ncells)
+    flux = @eval @shifted_array(Float64,  0:$ncells)
 
     #   integer fc,lc,ifirst,ilast
     #   integer ic,ie,ijump,istep
@@ -96,55 +96,55 @@ function main()
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # problem-specific parameters:
     #      tic()
-    const jump     =  0.0
-    const x_left   = -0.2
-    const x_right  =  1.0
-    const statelft =  2.0
-    const statergt =  0.0
-    const velocity =  1.0
+    jump     =  0.0
+    x_left   = -0.2
+    x_right  =  1.0
+    statelft =  2.0
+    statergt =  0.0
+    velocity =  1.0
 
-    const nsteps   =  10000
-    const tmax     =  0.8
-    const cfl      =  0.9
+    nsteps   =  10000
+    tmax     =  0.8
+    cfl      =  0.9
 
     # array bounds:
-    const fc=-2
-    const lc=ncells+1
-    const ifirst=0
-    const ilast=ncells-1
+    fc=-2
+    lc=ncells+1
+    ifirst=0
+    ilast=ncells-1
 
     #  uniform mesh:
     dx=(x_right-x_left)/ncells
-    @unsafe for ie in ifirst:ilast+1
+    @inbounds for ie in ifirst:ilast+1
         x[ie]=x_left+ie*dx
     end
 
     # initial values for diffential equation:
     ijump=max(ifirst-1,min(convert(Int,round(ncells*(jump-x_left)/(x_right-x_left))),ilast+1))
     # left state to left of jump
-    @unsafe for ic=ifirst:ijump-1
+    @inbounds for ic=ifirst:ijump-1
         u[ic]=statelft
     end
     # volume-weighted average in cell containing jump
     frac=(jump-x_left-ijump*dx)/(x_right-x_left)
     u[ijump]=statelft*frac+statergt*(1.0-frac)
     # right state to right of jump
-    @unsafe for ic=ijump+1:ilast
+    @inbounds for ic=ijump+1:ilast
         u[ic]=statergt
     end
 
     # stable timestep (independent of time for linear advection):
     mindx=1.0e300
-    @unsafe for ic=ifirst:ilast
+    @inbounds for ic=ifirst:ilast
         mindx=min(mindx,x[ic+1]-x[ic])
     end
 
     dt = cfl*mindx/abs(velocity)
-      
+
     u = do_computation(nsteps, ncells, tmax, ifirst, ilast, statelft, statergt, velocity, dt, fc, lc, flux, x, u)
 
     # write final results (plot later)
-    @unsafe for ic=0:ncells-1
+    @inbounds for ic=0:ncells-1
         xc = (x[ic]+x[ic+1])*0.5
         uc = u[ic]
         #@printf("%e %e\n",xc,uc)
@@ -160,7 +160,7 @@ end # main
 
 #@profile main()
 #Profile.print()
-## 
+##
 ## #code_typed(main,())
-## 
+##
 ## #code_native(main,())
