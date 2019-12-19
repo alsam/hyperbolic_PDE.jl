@@ -21,6 +21,8 @@
 #  Use the software at your own risk.
 #***********************************************************************
 
+using OffsetArrays
+
 function method(dt::Float64,fc::Int,lc::Int,fm::Int,lm::Int,fs::Int,ls::Int,ifirst::Int,ilast::Int,
                 conserved::OffsetArray{Float64,1},
                 flux::OffsetArray{Float64,1})
@@ -28,7 +30,7 @@ function method(dt::Float64,fc::Int,lc::Int,fm::Int,lm::Int,fs::Int,ls::Int,ifir
 #   multiply fluxes by dt (ie, compute time integral over cell side)
 #   ******************************************************************
     vdt=velocity*dt
-    @unsafe for ie=ifirst:ilast+1
+    for ie=ifirst:ilast+1
         flux[ie]=vdt*conserved[ie-1]
     end
 end

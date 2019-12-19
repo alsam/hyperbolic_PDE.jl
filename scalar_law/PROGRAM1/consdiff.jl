@@ -29,7 +29,7 @@ function consdiff(fic::Int,lac::Int,fif::Int,laf::Int,fix::Int,lax::Int,
 #   ******************************************************************
 #   update conservd to new time
 #   ******************************************************************
-    @unsafe for ic=ifirst:ilast
+    @inbounds for ic=ifirst:ilast
         conservd[ic] -= (flux[ic+1]-flux[ic]) / (x[ic+1]-x[ic])
     end
 end
@@ -42,7 +42,7 @@ function stabledt(fc::Int,lc::Int,fm::Int,lm::Int,ifirst::Int,ilast::Int,
 #   compute stable timestep
 #   ******************************************************************
     sdt=huge
-    @unsafe for ic=ifirst:ilast
+    @inbounds for ic=ifirst:ilast
         abs_lambda=abs(lambda_cell[ic])
         dx = x[ic+1]-x[ic]
         if abs_lambda > roundoff*dx

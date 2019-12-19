@@ -21,7 +21,7 @@
 #  Use the software at your own risk.
 #***********************************************************************
 
-module consts
+module Consts
 
     const roundoff  =  1.0-14
     const small     =  1.0-20

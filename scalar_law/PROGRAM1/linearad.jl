@@ -21,12 +21,14 @@
 #  Use the software at your own risk.
 #***********************************************************************
 
+using OffsetArrays
+
 function fluxderv(fc::Int,lc::Int,ifirst::Int,ilast::Int,
                   conservd::OffsetArray{Float64,1}, dfdu::OffsetArray{Float64,1})
 #   ******************************************************************
 #   compute derivative of flux with respect to conserved variable
 #   ******************************************************************
-    @unsafe for ic=ifirst:ilast
+    @inbounds for ic=ifirst:ilast
         dfdu[ic]=velocity
     end
 end
@@ -38,7 +40,7 @@ function riemann(fs::Int,ls::Int,ifirst::Int,ilast::Int,
 #   the following riemann solver is hard-wired for linear advection
 #   with velocity > 0
 #   ******************************************************************
-    @unsafe for ie=ifirst:ilast+1
+    @inbounds for ie=ifirst:ilast+1
         flux[ie]=velocity*left[ie]
     end
 end 

@@ -21,6 +21,8 @@
 #  Use the software at your own risk.
 #***********************************************************************
 
+using OffsetArrays
+
 function initsl(ncells::Int, fc::Int, lc::Int, fx::Int, lx::Int, ifirst::Int, ilast::Int,
                 conservd::OffsetArray{Float64,1},
                 x::OffsetArray{Float64,1})
@@ -28,16 +30,16 @@ function initsl(ncells::Int, fc::Int, lc::Int, fx::Int, lx::Int, ifirst::Int, il
 #   interior values only; others defined by boundary conditions
 #   ******************************************************************
     dx=(x_right-x_left)/ncells
-    @unsafe for ie=ifirst:ilast+1
+    @inbounds for ie=ifirst:ilast+1
         x[ie]=x_left+ie*dx
     end
     ijump=max(ifirst-1,min(convert(Int,round(ncells*(jump-x_left)/(x_right-x_left))),ilast+1))
-    @unsafe for ic=ifirst:ijump-1
+    @inbounds for ic=ifirst:ijump-1
         conservd[ic]=statelft
     end
     frac=(jump-x_left-ijump*dx)/(x_right-x_left)
     conservd[ijump]=statelft*frac+statergt*(1.0-frac)
-    @unsafe for ic=ijump+1:ilast
+    @inbounds for ic=ijump+1:ilast
         conservd[ic]=statergt
     end
 end
@@ -49,7 +51,7 @@ function bcmesh(fim::Int,lam::Int,ncells::Int, x::OffsetArray{Float64,1})
     if lam >= ncells
         it=ncells
         dx=x(it)-x(it-1)
-        @unsafe for ie=it+1:lam+1
+        @inbounds for ie=it+1:lam+1
             x[ie]=x[it]+dx*(ie-it)
         end
     end
@@ -58,7 +60,7 @@ function bcmesh(fim::Int,lam::Int,ncells::Int, x::OffsetArray{Float64,1})
 #   ******************************************************************
     if fim < 0
         dx=x(1)-x(0)
-        @unsafe for ie=fim:-1
+        @inbounds for ie=fim:-1
             x[ie]=x[0]+dx*(ie)
         end
     end      
@@ -70,7 +72,7 @@ function bccells(fic::Int,lac::Int,ncells::Int, conservd::OffsetArray{Float64,1}
 #   ******************************************************************
     if lac >= ncells
         # println("treating right side")
-        @unsafe for ic=ncells:lac
+        @inbounds for ic=ncells:lac
             # outgoing wave:
             conservd[ic]=conservd[ncells-1]
         end  
@@ -80,7 +82,7 @@ function bccells(fic::Int,lac::Int,ncells::Int, conservd::OffsetArray{Float64,1}
 #     ******************************************************************
     if fic < 0
         # println("treating left side")
-        @unsafe for ic=fic:-1
+        @inbounds for ic=fic:-1
             # outgoing wave:
             # conservd[ic]=conservd[0]
 
