@@ -21,9 +21,9 @@
 #  Use the software at your own risk.
 #***********************************************************************
 
-function main()
+const ncells=10000
 
-    local ncells=10000
+function main()
 
     #   integer nsteps
     #   double precision cfl,tmax

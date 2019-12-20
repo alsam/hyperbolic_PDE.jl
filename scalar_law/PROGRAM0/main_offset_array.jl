@@ -29,23 +29,23 @@ function do_computation(nsteps, ncells, tmax, ifirst, ilast, statelft, statergt,
     # loop over timesteps
     while istep < nsteps && t < tmax
         # right boundary condition: outgoing wave
-        @unsafe for ic=ncells:lc
+        @inbounds for ic=ncells:lc
             u[ic]=u[ncells-1]
         end
         # left boundary condition: specified value
-        @unsafe for ic=fc:-1
+        @inbounds for ic=fc:-1
             u[ic]=statelft
         end
 
         # upwind fluxes times dt (ie, flux time integral over cell side)
         # assumes velocity > 0
         vdt=velocity*dt
-        @unsafe for ie=ifirst:ilast+1
+        @inbounds for ie=ifirst:ilast+1
             flux[ie]=vdt*u[ie-1]
         end
 
         # conservative difference
-        @unsafe for ic=ifirst:ilast
+        @inbounds for ic=ifirst:ilast
             u[ic] -= (flux[ic+1]-flux[ic]) / (x[ic+1]-x[ic])
         end
 
@@ -56,9 +56,9 @@ function do_computation(nsteps, ncells, tmax, ifirst, ilast, statelft, statergt,
     u
 end
 
-function main()
+const ncells = 10000
 
-    const ncells = 10000
+function main()
 
     #   integer nsteps
     #   double precision cfl,tmax
@@ -68,9 +68,9 @@ function main()
     #  &  x(0:ncells),
     #  &  flux(0:ncells)
 
-    u    = OffsetArray(Float64, -2:ncells+1)
-    x    = OffsetArray(Float64,  0:ncells)
-    flux = OffsetArray(Float64,  0:ncells)
+    u    = OffsetArray{Float64}(undef, -2:ncells+1)
+    x    = OffsetArray{Float64}(undef,  0:ncells)
+    flux = OffsetArray{Float64}(undef,  0:ncells)
 
 
     #   integer fc,lc,ifirst,ilast
@@ -79,46 +79,46 @@ function main()
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # problem-specific parameters:
     #      tic()
-    const jump     =  0.0
-    const x_left   = -0.2
-    const x_right  =  1.0
-    const statelft =  2.0
-    const statergt =  0.0
-    const velocity =  1.0
+    local jump     =  0.0
+    local x_left   = -0.2
+    local x_right  =  1.0
+    local statelft =  2.0
+    local statergt =  0.0
+    local velocity =  1.0
 
-    const nsteps   =  10000
-    const tmax     =  0.8
-    const cfl      =  0.9
+    local nsteps   =  10000
+    local tmax     =  0.8
+    local cfl      =  0.9
 
     # array bounds:
-    const fc=-2
-    const lc=ncells+1
-    const ifirst=0
-    const ilast=ncells-1
+    local fc=-2
+    local lc=ncells+1
+    local ifirst=0
+    local ilast=ncells-1
 
     #  uniform mesh:
     dx=(x_right-x_left)/ncells
-    @unsafe for ie in ifirst:ilast+1
+    @inbounds for ie in ifirst:ilast+1
         x[ie]=x_left+ie*dx
     end
 
     # initial values for diffential equation:
     ijump=max(ifirst-1,min(convert(Int,round(ncells*(jump-x_left)/(x_right-x_left))),ilast+1))
     # left state to left of jump
-    @unsafe for ic=ifirst:ijump-1
+    @inbounds for ic=ifirst:ijump-1
         u[ic]=statelft
     end
     # volume-weighted average in cell containing jump
     frac=(jump-x_left-ijump*dx)/(x_right-x_left)
     u[ijump]=statelft*frac+statergt*(1.0-frac)
     # right state to right of jump
-    @unsafe for ic=ijump+1:ilast
+    @inbounds for ic=ijump+1:ilast
         u[ic]=statergt
     end
 
     # stable timestep (independent of time for linear advection):
     mindx=1.0e300
-    @unsafe for ic=ifirst:ilast
+    @inbounds for ic=ifirst:ilast
         mindx=min(mindx,x[ic+1]-x[ic])
     end
 
@@ -127,7 +127,7 @@ function main()
     u = do_computation(nsteps, ncells, tmax, ifirst, ilast, statelft, statergt, velocity, dt, fc, lc, flux, x, u)
 
     # write final results (plot later)
-    @unsafe for ic=0:ncells-1
+    @inbounds for ic=0:ncells-1
         xc = (x[ic]+x[ic+1])*0.5
         uc = u[ic]
         #@printf("%e %e\n",xc,uc)
